@@ -77,7 +77,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/beyondcivic/goreasoner/pkg/reasoner"
 	"github.com/beyondcivic/goreasoner/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -98,11 +97,11 @@ Croissant is a standardized way to describe machine learning datasets using JSON
 // Call Once.
 func Init() {
 	// Initialize viper for configuration
-	viper.SetEnvPrefix("CROISSANT")
+	viper.SetEnvPrefix("GOREASONER")
 	viper.AutomaticEnv()
 
 	// Add child commands
-	RootCmd.AddCommand(versionCmd()) 
+	RootCmd.AddCommand(versionCmd())
 }
 
 func Execute() {
@@ -121,10 +120,6 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
-}
-
-func isCSVFile(filename string) bool {
-	return reasoner.IsCSVFile(filename)
 }
 
 func determineOutputPath(providedPath, csvPath string) string {

@@ -6,9 +6,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/beyondcivic/goreasoner/pkg/reasoner"
 	"github.com/beyondcivic/goreasoner/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -29,5 +27,3 @@ func versionCmd() *cobra.Command {
 		},
 	}
 }
-
-  
