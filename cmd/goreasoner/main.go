@@ -1,40 +1,37 @@
 // Package cmd provides the command-line interface for goreasoner.
 //
-// goreasoner is a Go implementation for working with the ML Commons Croissant
-// metadata format - a standardized way to describe machine learning datasets using JSON-LD.
+// goreasoner is a Go implementation of a forward reasoner for RDF/OWL ontologies.
+// It parses Turtle format inputs and applies RDFS/OWL inference rules to derive
+// new facts from the given TBox (terminology/schema) and ABox (assertions/instances).
 //
 // The command-line tool provides functionality to:
-//   - Generate Croissant metadata from CSV files with automatic type inference
-//   - Validate existing Croissant metadata files for specification compliance
-//   - Compare metadata files for schema compatibility
-//   - Analyze CSV file structure and display column information
-//   - Display version and build information
+//   - Parse and load Turtle format RDF data
+//   - Apply forward reasoning with RDFS/OWL inference rules
+//   - Query the resulting knowledge base
+//   - Export inferred triples in N-Triples format
+//   - Display reasoning statistics and version information
 //
 // # Command Reference
 //
-// Generate metadata with default output path:
+// Perform forward reasoning on RDF data:
 //
-//	goreasoner generate data.csv
+//	goreasoner reason ontology.ttl data.ttl
 //
-// Generate metadata with custom output path:
+// Load TBox and ABox separately:
 //
-//	goreasoner generate data.csv -o output.jsonld
+//	goreasoner reason --tbox schema.ttl --abox instances.ttl
 //
-// Generate and validate metadata:
+// Query the knowledge base:
 //
-//	goreasoner generate data.csv -o metadata.jsonld --validate
+//	goreasoner query ontology.ttl data.ttl --subject "ex:Person"
 //
-// Validate existing metadata:
+// Export all triples including inferred:
 //
-//	goreasoner validate metadata.jsonld
+//	goreasoner reason ontology.ttl data.ttl --output results.nt
 //
-// Compare two metadata files for compatibility:
+// Show reasoning statistics:
 //
-//	goreasoner match reference.jsonld candidate.jsonld
-//
-// Analyze CSV file structure:
-//
-//	goreasoner info data.csv --sample-size 20
+//	goreasoner reason ontology.ttl data.ttl --verbose
 //
 // Show version information:
 //
@@ -42,31 +39,31 @@
 //
 // # Features
 //
-// Metadata Generation:
-//   - Automatic data type inference from CSV content
-//   - SHA-256 hash calculation for file verification
-//   - Configurable output paths and validation options
-//   - Support for environment variable configuration
+// Semantic Reasoning:
+//   - RDFS subclass transitivity (rdfs:subClassOf)
+//   - Type inheritance through class hierarchies
+//   - Domain and range inference (rdfs:domain, rdfs:range)
+//   - Property hierarchy reasoning (rdfs:subPropertyOf)
+//   - OWL class equivalence (owl:equivalentClass)
+//   - Individual identity (owl:sameAs)
+//   - Inverse properties (owl:inverseOf)
+//   - Transitive and symmetric properties
 //
-// Validation:
-//   - JSON-LD structure validation
-//   - Croissant specification compliance checking
-//   - Configurable validation modes (standard, strict)
-//   - Optional file existence and URL accessibility checking
+// RDF Processing:
+//   - Turtle format parsing with prefix support
+//   - Triple store with efficient indexing
+//   - N-Triples output format
+//   - Query interface for knowledge base exploration
 //
-// Schema Comparison:
-//   - Field-by-field compatibility analysis
-//   - Intelligent type compatibility (numeric type flexibility)
-//   - Support for schema evolution (additional fields allowed)
-//   - Detailed reporting of matches, mismatches, and missing fields
+// Performance:
 //
-// File Analysis:
+//   - Forward chaining inference engine
 //
-//   - CSV structure validation and statistics
+//   - Optimized rule application until fixpoint
 //
-//   - Column type inference with configurable sample sizes
+//   - Memory-efficient triple storage
 //
-//   - File size and row count analysis
+//   - Detailed reasoning statistics and progress reporting
 //
 //     goreasoner version
 package cmd
@@ -74,8 +71,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/beyondcivic/goreasoner/pkg/version"
 	"github.com/spf13/cobra"
@@ -88,9 +83,10 @@ import (
 // nolint:gochecknoglobals
 var RootCmd = &cobra.Command{
 	Use:   "goreasoner",
-	Short: "Croissant metadata tools",
-	Long: `A Go implementation for working with the ML Commons Croissant metadata format.
-Croissant is a standardized way to describe machine learning datasets using JSON-LD.`,
+	Short: "Forward reasoner for RDF/OWL ontologies",
+	Long: `A Go implementation of a forward reasoner for RDF/OWL ontologies.
+goreasoner parses Turtle format inputs and applies RDFS/OWL inference rules 
+to derive new facts from TBox (terminology/schema) and ABox (assertions/instances).`,
 	Version: version.Version,
 }
 
@@ -102,6 +98,7 @@ func Init() {
 
 	// Add child commands
 	RootCmd.AddCommand(versionCmd())
+	RootCmd.AddCommand(runCmd())
 }
 
 func Execute() {
@@ -110,30 +107,4 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-}
-
-// Helper functions
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func determineOutputPath(providedPath, csvPath string) string {
-	if providedPath != "" {
-		return providedPath
-	}
-
-	// Check environment variable
-	envOutputPath := os.Getenv("CROISSANT_OUTPUT_PATH")
-	if envOutputPath != "" {
-		return envOutputPath
-	}
-
-	// Generate default path based on CSV filename
-	baseName := strings.TrimSuffix(filepath.Base(csvPath), filepath.Ext(csvPath))
-	return baseName + "_metadata.jsonld"
 }

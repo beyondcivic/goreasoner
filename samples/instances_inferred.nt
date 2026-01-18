@@ -1,0 +1,57 @@
+<http://example.org/instances/deliveryTruck> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/RoadVehicle> .
+<http://example.org/instances/deliveryTruck> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Transport> .
+<http://example.org/instances/deliveryTruck> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Truck> .
+<http://example.org/instances/deliveryTruck> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Vehicle> .
+<http://example.org/instances/myHarley> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Motorcycle> .
+<http://example.org/instances/myHarley> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/RoadVehicle> .
+<http://example.org/instances/myHarley> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Transport> .
+<http://example.org/instances/myHarley> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Vehicle> .
+<http://example.org/instances/myTesla> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Car> .
+<http://example.org/instances/myTesla> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/RoadVehicle> .
+<http://example.org/instances/myTesla> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Transport> .
+<http://example.org/instances/myTesla> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/ontology/Vehicle> .
+<http://example.org/ontology/Car> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://example.org/ontology/Car> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/RoadVehicle> .
+<http://example.org/ontology/Car> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Transport> .
+<http://example.org/ontology/Car> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Vehicle> .
+<http://example.org/ontology/Car> <http://www.w3.org/2004/02/skos/core#altLabel> "Auto"@en .
+<http://example.org/ontology/Car> <http://www.w3.org/2004/02/skos/core#altLabel> "Automobile"@en .
+<http://example.org/ontology/Car> <http://www.w3.org/2004/02/skos/core#definition> "A road vehicle, typically with four wheels, used for transporting passengers."@en .
+<http://example.org/ontology/Car> <http://www.w3.org/2004/02/skos/core#inScheme> <http://example.org/ontology/TransportScheme> .
+<http://example.org/ontology/Car> <http://www.w3.org/2004/02/skos/core#prefLabel> "Car"@en .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/RoadVehicle> .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Transport> .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Vehicle> .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/2004/02/skos/core#definition> "A two-wheeled motor vehicle."@en .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/2004/02/skos/core#inScheme> <http://example.org/ontology/TransportScheme> .
+<http://example.org/ontology/Motorcycle> <http://www.w3.org/2004/02/skos/core#prefLabel> "Motorcycle"@en .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Transport> .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Vehicle> .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/2004/02/skos/core#altLabel> "Land Vehicle"@en .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/2004/02/skos/core#definition> "A vehicle designed to operate on roads."@en .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/2004/02/skos/core#inScheme> <http://example.org/ontology/TransportScheme> .
+<http://example.org/ontology/RoadVehicle> <http://www.w3.org/2004/02/skos/core#prefLabel> "Road Vehicle"@en .
+<http://example.org/ontology/Transport> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://example.org/ontology/Transport> <http://www.w3.org/2004/02/skos/core#altLabel> "Transportation"@en .
+<http://example.org/ontology/Transport> <http://www.w3.org/2004/02/skos/core#definition> "Any means or system used to move people or goods."@en .
+<http://example.org/ontology/Transport> <http://www.w3.org/2004/02/skos/core#inScheme> <http://example.org/ontology/TransportScheme> .
+<http://example.org/ontology/Transport> <http://www.w3.org/2004/02/skos/core#prefLabel> "Transport"@en .
+<http://example.org/ontology/TransportScheme> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2004/02/skos/core#ConceptScheme> .
+<http://example.org/ontology/TransportScheme> <http://www.w3.org/2004/02/skos/core#definition> "A scheme describing transport-related concepts."@en .
+<http://example.org/ontology/TransportScheme> <http://www.w3.org/2004/02/skos/core#prefLabel> "Transport Classification Scheme"@en .
+<http://example.org/ontology/Truck> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://example.org/ontology/Truck> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/RoadVehicle> .
+<http://example.org/ontology/Truck> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Transport> .
+<http://example.org/ontology/Truck> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Vehicle> .
+<http://example.org/ontology/Truck> <http://www.w3.org/2004/02/skos/core#altLabel> "Lorry"@en .
+<http://example.org/ontology/Truck> <http://www.w3.org/2004/02/skos/core#definition> "A large road vehicle used for transporting goods."@en .
+<http://example.org/ontology/Truck> <http://www.w3.org/2004/02/skos/core#inScheme> <http://example.org/ontology/TransportScheme> .
+<http://example.org/ontology/Truck> <http://www.w3.org/2004/02/skos/core#prefLabel> "Truck"@en .
+<http://example.org/ontology/Vehicle> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .
+<http://example.org/ontology/Vehicle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/ontology/Transport> .
+<http://example.org/ontology/Vehicle> <http://www.w3.org/2004/02/skos/core#altLabel> "Transport Vehicle"@en .
+<http://example.org/ontology/Vehicle> <http://www.w3.org/2004/02/skos/core#definition> "A device used to carry people or goods from one place to another."@en .
+<http://example.org/ontology/Vehicle> <http://www.w3.org/2004/02/skos/core#inScheme> <http://example.org/ontology/TransportScheme> .
+<http://example.org/ontology/Vehicle> <http://www.w3.org/2004/02/skos/core#prefLabel> "Vehicle"@en .

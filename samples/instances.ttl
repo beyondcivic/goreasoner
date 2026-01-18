@@ -1,0 +1,8 @@
+@prefix ex: <http://example.org/ontology/> .
+@prefix inst: <http://example.org/instances/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# Instance declarations
+inst:myTesla rdf:type ex:Car .
+inst:myHarley rdf:type ex:Motorcycle .
+inst:deliveryTruck rdf:type ex:Truck .

@@ -1,0 +1,57 @@
+@prefix ex: <http://example.org/ontology/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+############################################################
+# Concept Scheme (for SKOS annotations)
+############################################################
+
+ex:TransportScheme a skos:ConceptScheme ;
+    skos:prefLabel "Transport Classification Scheme"@en ;
+    skos:definition "A scheme describing transport-related concepts."@en .
+
+############################################################
+# OWL Class Hierarchy
+############################################################
+
+ex:Transport a owl:Class ;
+    skos:prefLabel "Transport"@en ;
+    skos:altLabel "Transportation"@en ;
+    skos:definition "Any means or system used to move people or goods."@en ;
+    skos:inScheme ex:TransportScheme .
+
+ex:Vehicle a owl:Class ;
+    rdfs:subClassOf ex:Transport ;
+    skos:prefLabel "Vehicle"@en ;
+    skos:altLabel "Transport Vehicle"@en ;
+    skos:definition "A device used to carry people or goods from one place to another."@en ;
+    skos:inScheme ex:TransportScheme .
+
+ex:RoadVehicle a owl:Class ;
+    rdfs:subClassOf ex:Vehicle ;
+    skos:prefLabel "Road Vehicle"@en ;
+    skos:altLabel "Land Vehicle"@en ;
+    skos:definition "A vehicle designed to operate on roads."@en ;
+    skos:inScheme ex:TransportScheme .
+
+ex:Car a owl:Class ;
+    rdfs:subClassOf ex:RoadVehicle ;
+    skos:prefLabel "Car"@en ;
+    skos:altLabel "Automobile"@en ;
+    skos:altLabel "Auto"@en ;
+    skos:definition "A road vehicle, typically with four wheels, used for transporting passengers."@en ;
+    skos:inScheme ex:TransportScheme .
+
+ex:Motorcycle a owl:Class ;
+    rdfs:subClassOf ex:RoadVehicle ;
+    skos:prefLabel "Motorcycle"@en ;
+    skos:definition "A two-wheeled motor vehicle."@en ;
+    skos:inScheme ex:TransportScheme .
+
+ex:Truck a owl:Class ;
+    rdfs:subClassOf ex:RoadVehicle ;
+    skos:prefLabel "Truck"@en ;
+    skos:altLabel "Lorry"@en ;
+    skos:definition "A large road vehicle used for transporting goods."@en ;
+    skos:inScheme ex:TransportScheme .
