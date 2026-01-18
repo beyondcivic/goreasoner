@@ -1,47 +1,110 @@
 # goreasoner
 
-Minimalistic Forward Reasoner written in Golang.
+[![Version](https://img.shields.io/badge/version-v1.0.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v1.0.0)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/doc/devel/release.html)
+[![Go Reference](https://pkg.go.dev/badge/github.com/beyondcivic/goreasoner.svg)](https://pkg.go.dev/github.com/beyondcivic/goreasoner)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-# Go RDF Reasoner Library
+A Go implementation of a forward reasoner for RDF/OWL ontologies. This library provides both command-line interface and Go library for semantic reasoning, parsing Turtle format inputs and applying RDFS/OWL inference rules to derive new facts from TBox (terminology/schema) and ABox (assertions/instances).
 
-A lightweight in-memory forward reasoning library for RDF/OWL ontologies in Go. Parses Turtle format and applies RDFS/OWL inference rules.
+## Overview
 
-## Features
+The Semantic Web relies on ontologies and inference to derive implicit knowledge from explicit facts. This tool streamlines RDF/OWL reasoning by:
 
-- **Turtle Parser**: Custom parser (no external dependencies) supporting:
-  - Prefixes and base IRIs
-  - Full IRIs and prefixed names
-  - Blank nodes
-  - Literals with language tags and datatypes
-  - Predicate-object lists (`;`) and object lists (`,`)
+- **Parsing Turtle format RDF data** with full prefix and IRI support
+- **Applying forward reasoning rules** based on RDFS and OWL specifications
+- **Deriving new knowledge** through transitive, symmetric, and hierarchical inference
+- **Providing efficient triple storage** with indexed lookups for fast querying
+- **Offering both CLI and library interfaces** for different integration needs
 
-- **Forward Reasoning Rules**:
-  - `rdfs:subClassOf` transitivity
-  - `rdf:type` inheritance through class hierarchy
-  - `rdfs:domain` and `rdfs:range` inference
-  - `rdfs:subPropertyOf` transitivity and inheritance
-  - `owl:equivalentClass` symmetry and transitivity
-  - `owl:sameAs` symmetry and transitivity
-  - `owl:inverseOf` inference
-  - `owl:TransitiveProperty` inference
-  - `owl:SymmetricProperty` inference
+This project provides both a command-line interface and a Go library for semantic reasoning on RDF/OWL data.
 
-## Installation
+## Key Features
+
+- ✅ **Turtle Parser**: Custom parser (no external dependencies) supporting prefixes, IRIs, blank nodes, and literals
+- ✅ **Forward Reasoning**: Complete RDFS/OWL inference rule implementation
+- ✅ **Class Hierarchies**: Transitive subclass relationships and type inheritance
+- ✅ **Property Reasoning**: Domain/range inference and property hierarchies
+- ✅ **OWL Support**: Equivalent classes, same-as reasoning, inverse and transitive properties
+- ✅ **CLI & Library**: Both command-line tool and Go library interfaces
+- ✅ **Cross-platform**: Works on Linux, macOS, and Windows
+
+## Getting Started
+
+### Prerequisites
+
+- Go 1.24 or later
+- Nix 2.25.4 or later (optional but recommended)
+- PowerShell v7.5.1 or later (for building)
+
+### Installation
+
+#### Option 1: Install from Source
+
+1. Clone the repository:
 
 ```bash
-go get github.com/example/reasoner
+git clone https://github.com/beyondcivic/goreasoner.git
+cd goreasoner
 ```
 
-## Usage
+2. Build the application:
 
-### Simple API
+```bash
+go build -o goreasoner .
+```
+
+#### Option 2: Using Nix (Recommended)
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/beyondcivic/goreasoner.git
+cd goreasoner
+```
+
+2. Prepare the environment using Nix flakes:
+
+```bash
+nix develop
+```
+
+3. Build the application:
+
+```bash
+./build.ps1
+```
+
+#### Option 3: Go Install
+
+```bash
+go install github.com/beyondcivic/goreasoner@latest
+```
+
+## Quick Start
+
+### Command Line Interface
+
+The `goreasoner` tool provides commands for semantic reasoning on RDF data:
+
+```bash
+# Run forward reasoning on RDF data
+goreasoner run instances.ttl schema.ttl -o results.nt
+
+# Show version information
+goreasoner version
+```
+
+### Go Library Usage
 
 ```go
 package main
 
 import (
     "fmt"
-    "github.com/example/reasoner"
+    "log"
+
+    "github.com/beyondcivic/goreasoner/pkg/reasoner"
 )
 
 func main() {
@@ -63,45 +126,151 @@ ex:myCar rdf:type ex:Car .
     // Get all triples (including inferred)
     triples, err := reasoner.ForwardReason(abox, tbox)
     if err != nil {
-        panic(err)
+        log.Fatalf("Error running forward reasoning: %v", err)
     }
 
+    fmt.Printf("Inferred %d total triples\n", len(triples))
     for _, t := range triples {
         fmt.Println(t)
     }
 }
 ```
 
-### Detailed Results
+## Detailed Command Reference
 
-```go
-result, err := reasoner.ForwardReasonWithDetails(abox, tbox)
-if err != nil {
-    panic(err)
-}
+### `run` - Execute Forward Reasoning
 
-fmt.Printf("Original: %d, Inferred: %d, Total: %d\n",
-    result.OriginalCount, result.InferredCount, result.TotalCount)
+Run forward reasoning on RDF data using TBox (schema) and ABox (instances).
 
-fmt.Println("Inferred triples:")
-for _, t := range result.InferredTriples {
-    fmt.Println(t)
-}
+```bash
+goreasoner run [ABOX_FILE] [TBOX_FILE] [OPTIONS]
 ```
+
+**Options:**
+
+- `-o, --output`: Output file path for N-Triples (default: `[abox_filename]_inferred.nt`)
+
+**Examples:**
+
+```bash
+# Basic reasoning
+goreasoner run instances.ttl schema.ttl
+
+# With custom output path
+goreasoner run instances.ttl schema.ttl -o my-results.nt
+```
+
+### `version` - Show Version Information
+
+Display version, build information, and system details.
+
+```bash
+goreasoner version
+```
+
+## Supported Inference Rules
+
+The reasoner implements comprehensive RDFS/OWL inference rules:
+
+| Rule Category                    | Description                                | Example                   |
+| -------------------------------- | ------------------------------------------ | ------------------------- |
+| **rdfs:subClassOf transitivity** | If A ⊑ B and B ⊑ C, then A ⊑ C             | Car ⊑ Vehicle ⊑ Transport |
+| **rdf:type inheritance**         | If x:A and A ⊑ B, then x:B                 | myCar:Car → myCar:Vehicle |
+| **rdfs:domain inference**        | If P domain C and x P y, then x:C          | hasOwner domain Person    |
+| **rdfs:range inference**         | If P range C and x P y, then y:C           | hasAge range Integer      |
+| **rdfs:subPropertyOf**           | Property hierarchy reasoning               | drives ⊑ operates         |
+| **owl:equivalentClass**          | Class equivalence (symmetric/transitive)   | Vehicle ≡ Automobile      |
+| **owl:sameAs**                   | Individual identity (symmetric/transitive) | person1 ≡ person2         |
+| **owl:inverseOf**                | Inverse property inference                 | owns ⟷ isOwnedBy          |
+| **owl:TransitiveProperty**       | Transitive property chains                 | locatedIn transitivity    |
+| **owl:SymmetricProperty**        | Symmetric property inference               | marriedTo symmetry        |
+
+## N-Triples Output Format
+
+The tool outputs reasoning results in standard N-Triples format:
+
+```
+<http://example.org/myCar> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/Car> .
+<http://example.org/myCar> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/Vehicle> .
+<http://example.org/myCar> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/Transport> .
+<http://example.org/Car> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/Vehicle> .
+<http://example.org/Vehicle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/Transport> .
+```
+
+## Examples
+
+### Example 1: Basic Class Hierarchy Reasoning
+
+```bash
+# Create schema file (tbox.ttl)
+echo '@prefix ex: <http://example.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:SportsCar rdfs:subClassOf ex:Car .
+ex:Car rdfs:subClassOf ex:Vehicle .' > tbox.ttl
+
+# Create instance file (abox.ttl)
+echo '@prefix ex: <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+ex:myFerrari rdf:type ex:SportsCar .' > abox.ttl
+
+# Run reasoning
+goreasoner run abox.ttl tbox.ttl -o results.nt
+
+# View results
+cat results.nt
+```
+
+### Example 2: Complex Ontology Reasoning
+
+Given an ontology with domain/range restrictions, property hierarchies, and equivalent classes, the reasoner will derive all implicit knowledge according to RDFS/OWL semantics.
+
+## API Reference
+
+### Core Functions
+
+#### `ForwardReason(abox, tbox string) ([]string, error)`
+
+Main API function that performs forward reasoning on RDF data.
+
+**Parameters:**
+
+- `abox`: Turtle string containing instance data (assertions)
+- `tbox`: Turtle string containing schema/ontology definitions
+
+**Returns:**
+
+- `[]string`: List of all triples (including inferred) in N-Triples format
+- `error`: Any parsing or processing errors
+
+#### `ForwardReasonWithDetails(abox, tbox string) (*ReasoningResult, error)`
+
+Returns detailed reasoning results with original/inferred triple separation.
+
+**Parameters:**
+
+- `abox`: Turtle string containing instance data
+- `tbox`: Turtle string containing schema definitions
+
+**Returns:**
+
+- `*ReasoningResult`: Detailed results structure
+- `error`: Any parsing or processing errors
 
 ### Using the Reasoner Directly
 
 ```go
 r := reasoner.NewReasoner()
 
-// Load TBox
+// Load TBox (schema)
 if err := r.LoadTurtle(tbox); err != nil {
-    panic(err)
+    log.Fatalf("Error loading TBox: %v", err)
 }
 
-// Load ABox
+// Load ABox (instances)
 if err := r.LoadTurtle(abox); err != nil {
-    panic(err)
+    log.Fatalf("Error loading ABox: %v", err)
 }
 
 // Run reasoning
@@ -119,66 +288,162 @@ types := r.GetInferredTypes("http://example.org/myCar")
 fmt.Printf("Types of myCar: %v\n", types)
 ```
 
-## API Reference
+### Data Structures
 
-### Main Functions
+#### `ReasoningResult`
 
-| Function                                                                | Description                                                |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `ForwardReason(abox, tbox string) ([]string, error)`                    | Main API - returns all triples as strings                  |
-| `ForwardReasonWithDetails(abox, tbox string) (*ReasoningResult, error)` | Returns detailed results with original/inferred separation |
+Represents detailed reasoning results:
+
+```go
+type ReasoningResult struct {
+    OriginalTriples []string // Triples from input
+    InferredTriples []string // Newly inferred triples
+    AllTriples      []string // All triples combined
+    OriginalCount   int      // Number of original triples
+    InferredCount   int      // Number of inferred triples
+    TotalCount      int      // Total number of triples
+}
+```
+
+#### `Triple`
+
+Represents an RDF triple:
+
+```go
+type Triple struct {
+    Subject   string
+    Predicate string
+    Object    string
+}
+```
+
+#### `Reasoner`
+
+Main reasoner structure with methods:
+
+```go
+type Reasoner struct {
+    store  *TripleStore
+    rules  []Rule
+    parser *TurtleParser
+}
+```
 
 ### Reasoner Methods
 
 | Method                                              | Description                                                       |
 | --------------------------------------------------- | ----------------------------------------------------------------- |
 | `NewReasoner() *Reasoner`                           | Create a new reasoner with default rules                          |
+| `NewReasonerWithRules(rules []Rule) *Reasoner`      | Create a reasoner with custom rules                               |
 | `LoadTurtle(content string) error`                  | Parse and load Turtle content                                     |
 | `RunForwardReasoning() int`                         | Apply all rules until fixpoint, returns count of inferred triples |
 | `GetAllTriples() []string`                          | Get all triples as N-Triples strings                              |
 | `GetInferredTypes(subject string) []string`         | Get all rdf:type values for a subject                             |
 | `Query(subject, predicate, object string) []Triple` | Pattern matching query (use "" as wildcard)                       |
+| `GetStore() *TripleStore`                           | Access the underlying triple store                                |
 
-### Supported Inference Rules
+## Architecture
 
-1. **rdfs:subClassOf transitivity**: If A ⊑ B and B ⊑ C, then A ⊑ C
-2. **rdf:type inheritance**: If x:A and A ⊑ B, then x:B
-3. **rdfs:domain inference**: If P domain C and x P y, then x:C
-4. **rdfs:range inference**: If P range C and x P y, then y:C
-5. **rdfs:subPropertyOf transitivity**: If P1 ⊑ P2 and P2 ⊑ P3, then P1 ⊑ P3
-6. **rdfs:subPropertyOf inheritance**: If P1 ⊑ P2 and x P1 y, then x P2 y
-7. **owl:equivalentClass symmetry/transitivity**
-8. **owl:sameAs symmetry/transitivity**
-9. **owl:inverseOf inference**: If P1 inverse P2 and x P1 y, then y P2 x
-10. **owl:TransitiveProperty inference**
-11. **owl:SymmetricProperty inference**
+The library is organized into several key components:
+
+### Core Package (`pkg/reasoner`)
+
+- **Forward Reasoning Engine**: Rule-based inference with fixpoint computation
+- **Turtle Parser**: Complete Turtle format parser with prefix support
+- **Triple Store**: Indexed in-memory storage for efficient querying
+- **Rule System**: Modular RDFS/OWL inference rules
+- **Query Interface**: Pattern matching and type inference queries
+
+### Command Line Interface (`cmd/goreasoner`)
+
+- **Cobra-based CLI** with subcommands for reasoning operations
+- **File I/O handling** for Turtle input and N-Triples output
+- **Comprehensive help system** with detailed usage examples
+- **Flexible output options** and error handling
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Make your changes and add tests
+4. Ensure all tests pass: `go test ./...`
+5. Commit your changes: `git commit -am 'Add new feature'`
+6. Push to the branch: `git push origin feature/new-feature`
+7. Submit a pull request
+
+### Testing
+
+Run the test suite:
+
+```bash
+go test ./...
+```
+
+Run tests with coverage:
+
+```bash
+go test -cover ./...
+```
+
+## Build Environment
+
+### Using Nix (Recommended)
+
+Use Nix flakes to set up the build environment:
+
+```bash
+nix develop
+```
+
+### Manual Build
+
+Check the build arguments in `build.ps1`:
+
+```bash
+# Build static binary with version information
+$env:CGO_ENABLED = "1"
+$env:GOOS = "linux"
+$env:GOARCH = "amd64"
+```
+
+Then run:
+
+```bash
+./build.ps1
+```
+
+Or build manually:
+
+```bash
+go build -o goreasoner .
+```
 
 ## File Structure
 
 ```
-reasoner/
-├── go.mod              # Module definition
-├── reasoner.go         # Main API and Reasoner type
-├── parser.go           # Turtle format parser
-├── store.go            # In-memory triple store
-├── rules.go            # Forward reasoning rules
-├── reasoner_test.go    # Unit tests
-└── example/
-    └── main.go         # Usage example
-```
-
-## Running Tests
-
-```bash
-go test -v
-```
-
-## Running the Example
-
-```bash
-go run example/main.go
+goreasoner/
+├── go.mod                    # Module definition
+├── main.go                   # Main entry point
+├── build.ps1                 # Build script
+├── flake.nix                 # Nix flake configuration
+├── cmd/
+│   └── goreasoner/
+│       ├── main.go           # CLI interface
+│       └── commands.go       # Command definitions
+├── pkg/
+│   ├── reasoner/
+│   │   ├── core.go           # Main API and Reasoner type
+│   │   ├── parser.go         # Turtle format parser
+│   │   ├── store.go          # In-memory triple store
+│   │   ├── rules.go          # Forward reasoning rules
+│   │   ├── utils.go          # Utility functions
+│   │   └── error.go          # Error handling
+│   └── version/
+│       └── version.go        # Version information
+└── docs/
+    └── docs-gen.go           # Documentation generator
 ```
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
