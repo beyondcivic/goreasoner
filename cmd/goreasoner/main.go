@@ -1,0 +1,144 @@
+// Package cmd provides the command-line interface for goreasoner.
+//
+// goreasoner is a Go implementation for working with the ML Commons Croissant
+// metadata format - a standardized way to describe machine learning datasets using JSON-LD.
+//
+// The command-line tool provides functionality to:
+//   - Generate Croissant metadata from CSV files with automatic type inference
+//   - Validate existing Croissant metadata files for specification compliance
+//   - Compare metadata files for schema compatibility
+//   - Analyze CSV file structure and display column information
+//   - Display version and build information
+//
+// # Command Reference
+//
+// Generate metadata with default output path:
+//
+//	goreasoner generate data.csv
+//
+// Generate metadata with custom output path:
+//
+//	goreasoner generate data.csv -o output.jsonld
+//
+// Generate and validate metadata:
+//
+//	goreasoner generate data.csv -o metadata.jsonld --validate
+//
+// Validate existing metadata:
+//
+//	goreasoner validate metadata.jsonld
+//
+// Compare two metadata files for compatibility:
+//
+//	goreasoner match reference.jsonld candidate.jsonld
+//
+// Analyze CSV file structure:
+//
+//	goreasoner info data.csv --sample-size 20
+//
+// Show version information:
+//
+//	goreasoner version
+//
+// # Features
+//
+// Metadata Generation:
+//   - Automatic data type inference from CSV content
+//   - SHA-256 hash calculation for file verification
+//   - Configurable output paths and validation options
+//   - Support for environment variable configuration
+//
+// Validation:
+//   - JSON-LD structure validation
+//   - Croissant specification compliance checking
+//   - Configurable validation modes (standard, strict)
+//   - Optional file existence and URL accessibility checking
+//
+// Schema Comparison:
+//   - Field-by-field compatibility analysis
+//   - Intelligent type compatibility (numeric type flexibility)
+//   - Support for schema evolution (additional fields allowed)
+//   - Detailed reporting of matches, mismatches, and missing fields
+//
+// File Analysis:
+//
+//   - CSV structure validation and statistics
+//
+//   - Column type inference with configurable sample sizes
+//
+//   - File size and row count analysis
+//
+//     goreasoner version
+package cmd
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/beyondcivic/goreasoner/pkg/reasoner"
+	"github.com/beyondcivic/goreasoner/pkg/version"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+// Root cobra command.
+// Call Init() once to initialize child commands.
+// Global so it can be picked up by docs/doc-gen.go.
+// nolint:gochecknoglobals
+var RootCmd = &cobra.Command{
+	Use:   "goreasoner",
+	Short: "Croissant metadata tools",
+	Long: `A Go implementation for working with the ML Commons Croissant metadata format.
+Croissant is a standardized way to describe machine learning datasets using JSON-LD.`,
+	Version: version.Version,
+}
+
+// Call Once.
+func Init() {
+	// Initialize viper for configuration
+	viper.SetEnvPrefix("CROISSANT")
+	viper.AutomaticEnv()
+
+	// Add child commands
+	RootCmd.AddCommand(versionCmd()) 
+}
+
+func Execute() {
+	// Execute the command
+	if err := RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+// Helper functions
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func isCSVFile(filename string) bool {
+	return reasoner.IsCSVFile(filename)
+}
+
+func determineOutputPath(providedPath, csvPath string) string {
+	if providedPath != "" {
+		return providedPath
+	}
+
+	// Check environment variable
+	envOutputPath := os.Getenv("CROISSANT_OUTPUT_PATH")
+	if envOutputPath != "" {
+		return envOutputPath
+	}
+
+	// Generate default path based on CSV filename
+	baseName := strings.TrimSuffix(filepath.Base(csvPath), filepath.Ext(csvPath))
+	return baseName + "_metadata.jsonld"
+}
