@@ -1,6 +1,6 @@
 # goreasoner
 
-[![Version](https://img.shields.io/badge/version-v1.0.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v1.0.0)
+[![Version](https://img.shields.io/badge/version-v0.2.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v0.2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/doc/devel/release.html)
 [![Go Reference](https://pkg.go.dev/badge/github.com/beyondcivic/goreasoner.svg)](https://pkg.go.dev/github.com/beyondcivic/goreasoner)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -26,6 +26,7 @@ This project provides both a command-line interface and a Go library for semanti
 - ✅ **Class Hierarchies**: Transitive subclass relationships and type inheritance
 - ✅ **Property Reasoning**: Domain/range inference and property hierarchies
 - ✅ **OWL Support**: Equivalent classes, same-as reasoning, inverse and transitive properties
+- ✅ **Multiple Output Formats**: N-Triples and Datalog output formats supported
 - ✅ **CLI & Library**: Both command-line tool and Go library interfaces
 - ✅ **Cross-platform**: Works on Linux, macOS, and Windows
 
@@ -88,8 +89,11 @@ go install github.com/beyondcivic/goreasoner@latest
 The `goreasoner` tool provides commands for semantic reasoning on RDF data:
 
 ```bash
-# Run forward reasoning on RDF data
+# Run forward reasoning on RDF data (N-Triples output)
 goreasoner run instances.ttl schema.ttl -o results.nt
+
+# Run forward reasoning with Datalog output
+goreasoner run instances.ttl schema.ttl --outputType=datalog -o results.dl
 
 # Show version information
 goreasoner version
@@ -148,16 +152,23 @@ goreasoner run [ABOX_FILE] [TBOX_FILE] [OPTIONS]
 
 **Options:**
 
-- `-o, --output`: Output file path for N-Triples (default: `[abox_filename]_inferred.nt`)
+- `-o, --output`: Output file path (default: `[abox_filename]_inferred.nt`)
+- `--outputType`: Output format - `ntriple` or `datalog` (default: `ntriple`)
 
 **Examples:**
 
 ```bash
-# Basic reasoning
+# Basic reasoning (N-Triples output)
 goreasoner run instances.ttl schema.ttl
 
 # With custom output path
 goreasoner run instances.ttl schema.ttl -o my-results.nt
+
+# Datalog output format
+goreasoner run instances.ttl schema.ttl --outputType=datalog
+
+# Datalog output with custom file
+goreasoner run instances.ttl schema.ttl --outputType=datalog -o results.dl
 ```
 
 ### `version` - Show Version Information
@@ -185,9 +196,13 @@ The reasoner implements comprehensive RDFS/OWL inference rules:
 | **owl:TransitiveProperty**       | Transitive property chains                 | locatedIn transitivity    |
 | **owl:SymmetricProperty**        | Symmetric property inference               | marriedTo symmetry        |
 
-## N-Triples Output Format
+## Output Formats
 
-The tool outputs reasoning results in standard N-Triples format:
+The tool supports two output formats for reasoning results:
+
+### N-Triples Format (Default)
+
+Standard N-Triples format with full IRIs:
 
 ```
 <http://example.org/myCar> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://example.org/Car> .
@@ -196,6 +211,20 @@ The tool outputs reasoning results in standard N-Triples format:
 <http://example.org/Car> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/Vehicle> .
 <http://example.org/Vehicle> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://example.org/Transport> .
 ```
+
+### Datalog Format
+
+Datalog facts format with simplified names, suitable for Datalog reasoning systems:
+
+```
+type(myCar, Car).
+type(myCar, Vehicle).
+type(myCar, Transport).
+subClassOf(Car, Vehicle).
+subClassOf(Vehicle, Transport).
+```
+
+The Datalog format converts RDF triples `<subject> <predicate> <object>` to facts `predicate(subject, object).` and simplifies IRIs by extracting local names.
 
 ## Examples
 
@@ -215,11 +244,15 @@ echo '@prefix ex: <http://example.org/> .
 
 ex:myFerrari rdf:type ex:SportsCar .' > abox.ttl
 
-# Run reasoning
+# Run reasoning (N-Triples output)
 goreasoner run abox.ttl tbox.ttl -o results.nt
+
+# Run reasoning (Datalog output)
+goreasoner run abox.ttl tbox.ttl --outputType=datalog -o results.dl
 
 # View results
 cat results.nt
+cat results.dl
 ```
 
 ### Example 2: Complex Ontology Reasoning
