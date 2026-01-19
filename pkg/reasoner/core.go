@@ -6,7 +6,6 @@ package reasoner
 import (
 	"fmt"
 	"sort"
-	"strings"
 )
 
 // Reasoner performs forward reasoning on RDF data
@@ -229,14 +228,4 @@ type ReasoningResult struct {
 	OriginalCount   int      // Number of original triples
 	InferredCount   int      // Number of inferred triples
 	TotalCount      int      // Total number of triples
-}
-
-// String returns a human-readable summary of the reasoning result
-func (r *ReasoningResult) String() string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Reasoning Result:\n"))
-	sb.WriteString(fmt.Sprintf("  Original triples: %d\n", r.OriginalCount))
-	sb.WriteString(fmt.Sprintf("  Inferred triples: %d\n", r.InferredCount))
-	sb.WriteString(fmt.Sprintf("  Total triples: %d\n", r.TotalCount))
-	return sb.String()
 }

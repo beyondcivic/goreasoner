@@ -5,4 +5,4 @@
 # Instance declarations
 inst:myTesla rdf:type ex:Car .
 inst:myHarley rdf:type ex:Motorcycle .
-inst:deliveryTruck rdf:type ex:Truck .
+inst:myDeliveryTruck rdf:type ex:Truck .

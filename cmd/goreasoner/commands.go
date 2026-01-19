@@ -43,6 +43,7 @@ func runCmd() *cobra.Command {
 			aboxPath := args[0]
 			tboxPath := args[1]
 			flagOutputPath, _ := cmd.Flags().GetString("output")
+			flagOutputType, _ := cmd.Flags().GetString("outputType")
 
 			// Validate input files
 			if !fileExists(aboxPath) {
@@ -68,6 +69,12 @@ func runCmd() *cobra.Command {
 			// Determine output path
 			outputPath := determineOutputPath(flagOutputPath, aboxPath)
 
+			// Validate output type
+			if flagOutputType != "ntriple" && flagOutputType != "datalog" {
+				fmt.Printf("Error: Invalid output type '%s'. Must be 'ntriple' or 'datalog'.\n", flagOutputType)
+				os.Exit(1)
+			}
+
 			// Read input files
 			aboxContent, err := readFile(aboxPath)
 			if err != nil {
@@ -89,24 +96,33 @@ func runCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
+			// Convert output format if needed
+			var outputTriples []string
+			if flagOutputType == "datalog" {
+				outputTriples = reasoner.ConvertTriplesToDatalog(inferredTriples)
+			} else {
+				outputTriples = inferredTriples
+			}
+
 			// Write results to output file
 			if outputPath != "" {
-				err = writeTriplesToFile(inferredTriples, outputPath)
+				err = writeTriplesToFile(outputTriples, outputPath)
 				if err != nil {
 					fmt.Printf("Error writing output file: %v\n", err)
 					os.Exit(1)
 				}
 				fmt.Printf("✓ Forward reasoning completed successfully and saved to: %s\n", outputPath)
-				fmt.Printf("  Total triples: %d\n", len(inferredTriples))
+				fmt.Printf("  Total triples: %d (format: %s)\n", len(outputTriples), flagOutputType)
 			} else {
 				// Print to stdout if no output file specified
-				for _, triple := range inferredTriples {
+				for _, triple := range outputTriples {
 					fmt.Println(triple)
 				}
 			}
 		},
 	}
 	runCmd.Flags().StringP("output", "o", "", "Output path for the N-Triples file")
+	runCmd.Flags().String("outputType", "ntriple", "Output format: 'ntriple' or 'datalog' (default: ntriple)")
 
 	return runCmd
 }
