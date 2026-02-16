@@ -1,6 +1,6 @@
 # goreasoner
 
-[![Version](https://img.shields.io/badge/version-v0.2.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v0.2.0)
+[![Version](https://img.shields.io/badge/version-v0.3.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v0.3.0)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/doc/devel/release.html)
 [![Go Reference](https://pkg.go.dev/badge/github.com/beyondcivic/goreasoner.svg)](https://pkg.go.dev/github.com/beyondcivic/goreasoner)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
