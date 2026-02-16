@@ -26,6 +26,7 @@ This project provides both a command-line interface and a Go library for semanti
 - ✅ **Class Hierarchies**: Transitive subclass relationships and type inheritance
 - ✅ **Property Reasoning**: Domain/range inference and property hierarchies
 - ✅ **OWL Support**: Equivalent classes, same-as reasoning, inverse and transitive properties
+- ✅ **Datalog Reasoning**: Built-in Datalog parser and evaluator for rules, facts, and boolean queries
 - ✅ **Multiple Output Formats**: N-Triples and Datalog output formats supported
 - ✅ **CLI & Library**: Both command-line tool and Go library interfaces
 - ✅ **Cross-platform**: Works on Linux, macOS, and Windows
@@ -94,6 +95,9 @@ goreasoner run instances.ttl schema.ttl -o results.nt
 
 # Run forward reasoning with Datalog output
 goreasoner run instances.ttl schema.ttl --outputType=datalog -o results.dl
+
+# Query a Datalog program
+goreasoner dlquery results.dl "?- type(myTesla, Vehicle)."
 
 # Show version information
 goreasoner version
@@ -171,6 +175,32 @@ goreasoner run instances.ttl schema.ttl --outputType=datalog
 goreasoner run instances.ttl schema.ttl --outputType=datalog -o results.dl
 ```
 
+### `dlquery` - Query a Datalog Program
+
+Evaluate a boolean query against a Datalog program (facts and rules).
+
+```bash
+goreasoner dlquery [DATALOG_FILE] [QUERY]
+```
+
+**Arguments:**
+
+- `DATALOG_FILE`: Path to a `.dl` file containing Datalog facts and rules
+- `QUERY`: A Datalog query string in `?- predicate(args).` format
+
+**Examples:**
+
+```bash
+# Query a ground fact
+goreasoner dlquery data.dl "?- type(myTesla, Car)."
+
+# Query a derived fact
+goreasoner dlquery data.dl "?- Ancestor(john, jane)."
+
+# Query with variable (returns true if any binding exists)
+goreasoner dlquery data.dl "?- type(X, Vehicle)."
+```
+
 ### `version` - Show Version Information
 
 Display version, build information, and system details.
@@ -225,6 +255,139 @@ subClassOf(Vehicle, Transport).
 ```
 
 The Datalog format converts RDF triples `<subject> <predicate> <object>` to facts `predicate(subject, object).` and simplifies IRIs by extracting local names.
+
+## Datalog Reasoning
+
+In addition to RDF/OWL forward reasoning, goreasoner includes a built-in Datalog evaluator that supports facts, rules with variables, recursive rules, and boolean queries. The evaluator uses **naive bottom-up (forward-chaining) evaluation** with fixed-point computation to derive all possible facts before answering queries.
+
+### Datalog Syntax
+
+#### Facts
+
+Ground atoms terminated by a period:
+
+```
+Parent(john, mary).
+Type(myTesla, Car).
+```
+
+#### Rules
+
+Horn clauses with a head and one or more body atoms separated by `:-`:
+
+```
+Ancestor(X, Y) :- Parent(X, Y).
+Ancestor(X, Z) :- Parent(X, Y), Ancestor(Y, Z).
+```
+
+#### Variables
+
+Variables are recognized by these conventions:
+
+- Single uppercase letter: `X`, `Y`, `Z`
+- All-uppercase identifiers: `VAR_X`, `PERSON`, `NODE1`
+- `?`-prefixed identifiers: `?x`, `?person`
+
+Everything else is treated as a constant.
+
+#### Queries
+
+Queries use the `?-` prefix and return a boolean (true if any matching fact exists):
+
+```
+?- Ancestor(john, jane).
+?- type(X, Vehicle).
+```
+
+#### Comments
+
+Both Prolog-style (`%`) and C-style (`//`) line comments are supported:
+
+```
+% This is a comment
+Parent(john, mary).  // This is also a comment
+```
+
+### Datalog Go Library Usage
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    "github.com/beyondcivic/goreasoner/pkg/reasoner"
+)
+
+func main() {
+    program := `
+Parent(john, mary).
+Parent(mary, jane).
+Ancestor(X, Y) :- Parent(X, Y).
+Ancestor(X, Z) :- Parent(X, Y), Ancestor(Y, Z).
+`
+
+    result, err := reasoner.DLQuery(program, "?- Ancestor(john, jane).")
+    if err != nil {
+        log.Fatalf("Error: %v", err)
+    }
+    fmt.Println(result) // true
+}
+```
+
+For more control, you can use the lower-level API directly:
+
+```go
+program, err := reasoner.ParseDatalog(input)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Derive all facts via fixed-point evaluation
+derivedFacts := program.Reason()
+
+// Parse and evaluate a query
+query, err := reasoner.ParseQuery("?- Ancestor(john, jane).")
+if err != nil {
+    log.Fatal(err)
+}
+
+satisfied := program.EvaluateQuery(query, derivedFacts)
+```
+
+### Datalog API Reference
+
+#### `DLQuery(datalogContent, queryStr string) (bool, error)`
+
+Main API function for Datalog querying. Parses the program, runs reasoning to fixed point, and evaluates the query.
+
+#### `ParseDatalog(input string) (*DatalogProgram, error)`
+
+Parses a Datalog program string into a `DatalogProgram` containing facts and rules.
+
+#### `ParseQuery(s string) (DLAtom, error)`
+
+Parses a query string (with or without `?-` prefix) into a `DLAtom`.
+
+#### `(*DatalogProgram) Reason() []DLAtom`
+
+Runs forward-chaining evaluation until no new facts are derived. Returns all ground facts (original and inferred).
+
+#### `(*DatalogProgram) EvaluateQuery(query DLAtom, derivedFacts []DLAtom) bool`
+
+Checks whether a query matches any derived fact. Variables in the query act as wildcards.
+
+### Datalog Limitations
+
+The Datalog evaluator is designed for simple, positive Datalog programs. Be aware of the following limitations:
+
+- **No negation**: There is no support for negation-as-failure (`not`, `\+`) in rule bodies. Only positive atoms can appear in rules.
+- **No built-in comparisons or arithmetic**: Operators such as `!=`, `<`, `>`, and arithmetic expressions are not supported. All terms are symbolic constants or variables.
+- **Boolean queries only**: `DLQuery` returns `true`/`false`. It does not return variable bindings. For example, querying `?- Ancestor(john, X).` will tell you whether any ancestor exists, but will not enumerate them.
+- **No safety checks on rules**: The parser accepts rules where the head contains variables that do not appear in the body (e.g., `Foo(X) :- Bar(Y).`). Such rules will not produce incorrect results (ungrounded heads are silently discarded), but no warning is emitted.
+- **No indexing on facts**: The evaluator performs a linear scan over all facts when matching rule body atoms. This is adequate for small to medium programs but may become slow with thousands of facts.
+- **No aggregation or constraints**: Features like `count`, `min`, `max`, or integrity constraints found in extended Datalog systems are not supported.
 
 ## Examples
 
@@ -385,7 +548,8 @@ The library is organized into several key components:
 - **Turtle Parser**: Complete Turtle format parser with prefix support
 - **Triple Store**: Indexed in-memory storage for efficient querying
 - **Rule System**: Modular RDFS/OWL inference rules
-- **Query Interface**: Pattern matching and type inference queries
+- **Datalog Evaluator**: Parser and naive bottom-up reasoner for Datalog programs
+- **Query Interface**: Pattern matching, type inference, and Datalog queries
 
 ### Command Line Interface (`cmd/goreasoner`)
 
@@ -469,6 +633,7 @@ goreasoner/
 │   │   ├── parser.go         # Turtle format parser
 │   │   ├── store.go          # In-memory triple store
 │   │   ├── rules.go          # Forward reasoning rules
+│   │   ├── datalog.go        # Datalog parser and reasoner
 │   │   ├── utils.go          # Utility functions
 │   │   └── error.go          # Error handling
 │   └── version/

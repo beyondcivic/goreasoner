@@ -9,9 +9,20 @@ Package reasoner provides forward reasoning capabilities for RDF/OWL ontologies.
 ## Index
 
 - [Constants](<#constants>)
+- [func ConvertTriplesToDatalog\(triples \[\]string\) \[\]string](<#ConvertTriplesToDatalog>)
+- [func DLQuery\(datalogContent, queryStr string\) \(bool, error\)](<#DLQuery>)
 - [func ForwardReason\(abox, tbox string\) \(\[\]string, error\)](<#ForwardReason>)
 - [type AppError](<#AppError>)
   - [func \(e AppError\) Error\(\) string](<#AppError.Error>)
+- [type DLAtom](<#DLAtom>)
+  - [func ParseQuery\(s string\) \(DLAtom, error\)](<#ParseQuery>)
+  - [func \(a DLAtom\) String\(\) string](<#DLAtom.String>)
+- [type DLRule](<#DLRule>)
+- [type DLTerm](<#DLTerm>)
+- [type DatalogProgram](<#DatalogProgram>)
+  - [func ParseDatalog\(input string\) \(\*DatalogProgram, error\)](<#ParseDatalog>)
+  - [func \(p \*DatalogProgram\) EvaluateQuery\(query DLAtom, derivedFacts \[\]DLAtom\) bool](<#DatalogProgram.EvaluateQuery>)
+  - [func \(p \*DatalogProgram\) Reason\(\) \[\]DLAtom](<#DatalogProgram.Reason>)
 - [type DomainInference](<#DomainInference>)
   - [func \(r \*DomainInference\) Apply\(store \*TripleStore\) \[\]Triple](<#DomainInference.Apply>)
   - [func \(r \*DomainInference\) Name\(\) string](<#DomainInference.Name>)
@@ -105,8 +116,26 @@ const (
 )
 ```
 
+<a name="ConvertTriplesToDatalog"></a>
+## func [ConvertTriplesToDatalog](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/utils.go#L11>)
+
+```go
+func ConvertTriplesToDatalog(triples []string) []string
+```
+
+ConvertTriplesToDatalog converts a list of N\-Triple strings to Datalog format Each RDF triple \(subject, predicate, object\) becomes a Datalog fact: predicate\(subject, object\) IRIs are converted to simplified names by extracting the local part after \# or /
+
+<a name="DLQuery"></a>
+## func [DLQuery](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L313>)
+
+```go
+func DLQuery(datalogContent, queryStr string) (bool, error)
+```
+
+DLQuery is the main public API function for Datalog querying. It accepts a Datalog program and a query, performs reasoning, and returns true if the query is satisfied.
+
 <a name="ForwardReason"></a>
-## func [ForwardReason](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L150>)
+## func [ForwardReason](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L149>)
 
 ```go
 func ForwardReason(abox, tbox string) ([]string, error)
@@ -146,6 +175,99 @@ func (e AppError) Error() string
 ```
 
 
+
+<a name="DLAtom"></a>
+## type [DLAtom](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L16-L19>)
+
+DLAtom represents a Datalog atom: Predicate\(DLTerm1, DLTerm2, ...\)
+
+```go
+type DLAtom struct {
+    Predicate string
+    Terms     []DLTerm
+}
+```
+
+<a name="ParseQuery"></a>
+### func [ParseQuery](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L249>)
+
+```go
+func ParseQuery(s string) (DLAtom, error)
+```
+
+ParseQuery parses a Datalog query
+
+<a name="DLAtom.String"></a>
+### func \(DLAtom\) [String](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L33>)
+
+```go
+func (a DLAtom) String() string
+```
+
+
+
+<a name="DLRule"></a>
+## type [DLRule](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L22-L25>)
+
+DLRule represents a Datalog rule: Head :\- Body1, Body2, ...
+
+```go
+type DLRule struct {
+    Head DLAtom
+    Body []DLAtom
+}
+```
+
+<a name="DLTerm"></a>
+## type [DLTerm](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L10-L13>)
+
+DLTerm represents a Datalog term \(either a constant or a variable\)
+
+```go
+type DLTerm struct {
+    Value      string
+    IsVariable bool
+}
+```
+
+<a name="DatalogProgram"></a>
+## type [DatalogProgram](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L28-L31>)
+
+DatalogProgram represents a collection of facts and rules
+
+```go
+type DatalogProgram struct {
+    Facts []DLAtom
+    Rules []DLRule
+}
+```
+
+<a name="ParseDatalog"></a>
+### func [ParseDatalog](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L42>)
+
+```go
+func ParseDatalog(input string) (*DatalogProgram, error)
+```
+
+ParseDatalog parses a Datalog program from a string
+
+<a name="DatalogProgram.EvaluateQuery"></a>
+### func \(\*DatalogProgram\) [EvaluateQuery](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L393>)
+
+```go
+func (p *DatalogProgram) EvaluateQuery(query DLAtom, derivedFacts []DLAtom) bool
+```
+
+EvaluateQuery checks if a query matches any derived facts
+
+<a name="DatalogProgram.Reason"></a>
+### func \(\*DatalogProgram\) [Reason](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/datalog.go#L259>)
+
+```go
+func (p *DatalogProgram) Reason() []DLAtom
+```
+
+Reason evaluates the Datalog program and returns all derived facts
 
 <a name="DomainInference"></a>
 ## type [DomainInference](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/rules.go#L93>)
@@ -283,7 +405,7 @@ func (r *RangeInference) Name() string
 
 
 <a name="Reasoner"></a>
-## type [Reasoner](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L13-L17>)
+## type [Reasoner](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L12-L16>)
 
 Reasoner performs forward reasoning on RDF data
 
@@ -294,7 +416,7 @@ type Reasoner struct {
 ```
 
 <a name="NewReasoner"></a>
-### func [NewReasoner](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L20>)
+### func [NewReasoner](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L19>)
 
 ```go
 func NewReasoner() *Reasoner
@@ -303,7 +425,7 @@ func NewReasoner() *Reasoner
 NewReasoner creates a new reasoner with default rules
 
 <a name="NewReasonerWithRules"></a>
-### func [NewReasonerWithRules](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L29>)
+### func [NewReasonerWithRules](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L28>)
 
 ```go
 func NewReasonerWithRules(rules []Rule) *Reasoner
@@ -312,7 +434,7 @@ func NewReasonerWithRules(rules []Rule) *Reasoner
 NewReasonerWithRules creates a new reasoner with custom rules
 
 <a name="Reasoner.GetAllTriples"></a>
-### func \(\*Reasoner\) [GetAllTriples](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L79>)
+### func \(\*Reasoner\) [GetAllTriples](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L78>)
 
 ```go
 func (r *Reasoner) GetAllTriples() []string
@@ -321,7 +443,7 @@ func (r *Reasoner) GetAllTriples() []string
 GetAllTriples returns all triples in the store as strings
 
 <a name="Reasoner.GetInferredTypes"></a>
-### func \(\*Reasoner\) [GetInferredTypes](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L90>)
+### func \(\*Reasoner\) [GetInferredTypes](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L89>)
 
 ```go
 func (r *Reasoner) GetInferredTypes(subject string) []string
@@ -330,7 +452,7 @@ func (r *Reasoner) GetInferredTypes(subject string) []string
 GetInferredTypes returns all rdf:type assertions for a given subject
 
 <a name="Reasoner.GetStore"></a>
-### func \(\*Reasoner\) [GetStore](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L135>)
+### func \(\*Reasoner\) [GetStore](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L134>)
 
 ```go
 func (r *Reasoner) GetStore() *TripleStore
@@ -339,7 +461,7 @@ func (r *Reasoner) GetStore() *TripleStore
 GetStore returns the underlying triple store
 
 <a name="Reasoner.LoadTurtle"></a>
-### func \(\*Reasoner\) [LoadTurtle](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L38>)
+### func \(\*Reasoner\) [LoadTurtle](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L37>)
 
 ```go
 func (r *Reasoner) LoadTurtle(content string) error
@@ -348,7 +470,7 @@ func (r *Reasoner) LoadTurtle(content string) error
 LoadTurtle parses and loads Turtle content into the store
 
 <a name="Reasoner.Query"></a>
-### func \(\*Reasoner\) [Query](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L101>)
+### func \(\*Reasoner\) [Query](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L100>)
 
 ```go
 func (r *Reasoner) Query(subject, predicate, object string) []Triple
@@ -357,7 +479,7 @@ func (r *Reasoner) Query(subject, predicate, object string) []Triple
 Query returns all triples matching the given pattern Use empty string "" as wildcard
 
 <a name="Reasoner.RunForwardReasoning"></a>
-### func \(\*Reasoner\) [RunForwardReasoning](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L53>)
+### func \(\*Reasoner\) [RunForwardReasoning](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L52>)
 
 ```go
 func (r *Reasoner) RunForwardReasoning() int
@@ -366,7 +488,7 @@ func (r *Reasoner) RunForwardReasoning() int
 RunForwardReasoning applies all rules until no new facts are derived Returns the number of new triples inferred
 
 <a name="ReasoningResult"></a>
-## type [ReasoningResult](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L225-L232>)
+## type [ReasoningResult](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L224-L231>)
 
 ReasoningResult contains detailed results from forward reasoning
 
@@ -382,7 +504,7 @@ type ReasoningResult struct {
 ```
 
 <a name="ForwardReasonWithDetails"></a>
-### func [ForwardReasonWithDetails](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L174>)
+### func [ForwardReasonWithDetails](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L173>)
 
 ```go
 func ForwardReasonWithDetails(abox, tbox string) (*ReasoningResult, error)
@@ -391,7 +513,7 @@ func ForwardReasonWithDetails(abox, tbox string) (*ReasoningResult, error)
 ForwardReasonWithDetails returns both original and inferred triples separately
 
 <a name="ReasoningResult.String"></a>
-### func \(\*ReasoningResult\) [String](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/core.go#L235>)
+### func \(\*ReasoningResult\) [String](<https://github.com:beyondcivic/goreasoner/blob/main/pkg/reasoner/utils.go#L43>)
 
 ```go
 func (r *ReasoningResult) String() string

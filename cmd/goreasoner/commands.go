@@ -127,6 +127,47 @@ func runCmd() *cobra.Command {
 	return runCmd
 }
 
+// dlQueryCmd command
+func dlQueryCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "dlquery [datalogPath] [query]",
+		Short: "Query a Datalog file with facts and rules",
+		Long:  `Query a Datalog file with facts and rules using forward reasoning.`,
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			datalogPath := args[0]
+			queryStr := args[1]
+
+			// Validate input file
+			if !fileExists(datalogPath) {
+				fmt.Printf("Error: Datalog file '%s' does not exist.\n", datalogPath)
+				os.Exit(1)
+			}
+
+			// Read datalog file
+			datalogContent, err := readFile(datalogPath)
+			if err != nil {
+				fmt.Printf("Error reading Datalog file: %v\n", err)
+				os.Exit(1)
+			}
+
+			// Run Datalog query
+			result, err := reasoner.DLQuery(datalogContent, queryStr)
+			if err != nil {
+				fmt.Printf("Error running Datalog query: %v\n", err)
+				os.Exit(1)
+			}
+
+			// Print result
+			if result {
+				fmt.Println("true")
+			} else {
+				fmt.Println("false")
+			}
+		},
+	}
+}
+
 // Helper function to check if file exists
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
