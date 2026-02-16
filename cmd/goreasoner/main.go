@@ -99,6 +99,7 @@ func Init() {
 	// Add child commands
 	RootCmd.AddCommand(versionCmd())
 	RootCmd.AddCommand(runCmd())
+	RootCmd.AddCommand(dlQueryCmd())
 }
 
 func Execute() {
