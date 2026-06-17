@@ -8,14 +8,16 @@ import (
 	"sort"
 )
 
-// Reasoner performs forward reasoning on RDF data
+// Reasoner performs forward reasoning on RDF data.
 type Reasoner struct {
 	store  *TripleStore
-	rules  []Rule
+	rules  []Rule // kept for backward compat (NewReasonerWithRules)
 	parser *TurtleParser
+	// useLegacy is true only when created with custom rules via NewReasonerWithRules.
+	useLegacy bool
 }
 
-// NewReasoner creates a new reasoner with default rules
+// NewReasoner creates a new reasoner with the default semi-naive engine.
 func NewReasoner() *Reasoner {
 	return &Reasoner{
 		store:  NewTripleStore(),
@@ -24,16 +26,27 @@ func NewReasoner() *Reasoner {
 	}
 }
 
-// NewReasonerWithRules creates a new reasoner with custom rules
-func NewReasonerWithRules(rules []Rule) *Reasoner {
+// NewReasonerWithCapacity creates a reasoner pre-sized for estimatedTriples.
+func NewReasonerWithCapacity(estimatedTriples int) *Reasoner {
 	return &Reasoner{
-		store:  NewTripleStore(),
-		rules:  rules,
+		store:  newTripleStoreWithCapacity(estimatedTriples),
+		rules:  DefaultRules(),
 		parser: NewTurtleParser(),
 	}
 }
 
-// LoadTurtle parses and loads Turtle content into the store
+// NewReasonerWithRules creates a new reasoner with custom rules.
+// This uses the legacy per-rule Apply loop instead of the semi-naive engine.
+func NewReasonerWithRules(rules []Rule) *Reasoner {
+	return &Reasoner{
+		store:     NewTripleStore(),
+		rules:     rules,
+		parser:    NewTurtleParser(),
+		useLegacy: true,
+	}
+}
+
+// LoadTurtle parses and loads Turtle content into the store.
 func (r *Reasoner) LoadTurtle(content string) error {
 	triples, err := r.parser.Parse(content)
 	if err != nil {
@@ -47,9 +60,41 @@ func (r *Reasoner) LoadTurtle(content string) error {
 	return nil
 }
 
-// RunForwardReasoning applies all rules until no new facts are derived
-// Returns the number of new triples inferred
+// AddTriple adds a triple directly without Turtle parsing.
+// Returns true if the triple was new.
+func (r *Reasoner) AddTriple(s, p, o string) bool {
+	return r.store.Add(Triple{Subject: s, Predicate: p, Object: o})
+}
+
+// RunForwardReasoning applies all rules until no new facts are derived.
+// Returns the number of new triples inferred.
 func (r *Reasoner) RunForwardReasoning() int {
+	if r.useLegacy {
+		return r.runLegacyReasoning()
+	}
+	return r.runSemiNaive()
+}
+
+// runSemiNaive implements the fast incremental reasoning loop.
+func (r *Reasoner) runSemiNaive() int {
+	total := 0
+
+	// Initial delta = all triples currently in store.
+	delta := make([]compactTriple, len(r.store.fast.all))
+	copy(delta, r.store.fast.all)
+
+	for len(delta) > 0 {
+		var next []compactTriple
+		applyAllRules(r.store, delta, &next)
+		total += len(next)
+		delta = next
+	}
+
+	return total
+}
+
+// runLegacyReasoning is the original per-rule loop for custom rules.
+func (r *Reasoner) runLegacyReasoning() int {
 	totalInferred := 0
 
 	for {
@@ -74,7 +119,7 @@ func (r *Reasoner) RunForwardReasoning() int {
 	return totalInferred
 }
 
-// GetAllTriples returns all triples in the store as strings
+// GetAllTriples returns all triples in the store as strings.
 func (r *Reasoner) GetAllTriples() []string {
 	triples := r.store.All()
 	result := make([]string, len(triples))
@@ -85,7 +130,7 @@ func (r *Reasoner) GetAllTriples() []string {
 	return result
 }
 
-// GetInferredTypes returns all rdf:type assertions for a given subject
+// GetInferredTypes returns all rdf:type assertions for a given subject.
 func (r *Reasoner) GetInferredTypes(subject string) []string {
 	var types []string
 	for _, t := range r.store.FindBySubjectPredicate(subject, RDFType) {
@@ -95,8 +140,8 @@ func (r *Reasoner) GetInferredTypes(subject string) []string {
 	return types
 }
 
-// Query returns all triples matching the given pattern
-// Use empty string "" as wildcard
+// Query returns all triples matching the given pattern.
+// Use empty string "" as wildcard.
 func (r *Reasoner) Query(subject, predicate, object string) []Triple {
 	var results []Triple
 
@@ -130,7 +175,7 @@ func (r *Reasoner) Query(subject, predicate, object string) []Triple {
 	return results
 }
 
-// GetStore returns the underlying triple store
+// GetStore returns the underlying triple store.
 func (r *Reasoner) GetStore() *TripleStore {
 	return r.store
 }
@@ -169,7 +214,7 @@ func ForwardReason(abox, tbox string) ([]string, error) {
 	return reasoner.GetAllTriples(), nil
 }
 
-// ForwardReasonWithDetails returns both original and inferred triples separately
+// ForwardReasonWithDetails returns both original and inferred triples separately.
 func ForwardReasonWithDetails(abox, tbox string) (*ReasoningResult, error) {
 	reasoner := NewReasoner()
 
@@ -220,7 +265,7 @@ func ForwardReasonWithDetails(abox, tbox string) (*ReasoningResult, error) {
 	}, nil
 }
 
-// ReasoningResult contains detailed results from forward reasoning
+// ReasoningResult contains detailed results from forward reasoning.
 type ReasoningResult struct {
 	OriginalTriples []string // Triples from input
 	InferredTriples []string // Newly inferred triples
