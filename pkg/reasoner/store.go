@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-// Triple represents an RDF triple (subject, predicate, object)
+// Triple represents an RDF triple (subject, predicate, object).
 type Triple struct {
 	Subject   string
 	Predicate string
 	Object    string
 }
 
-// String returns the triple in N-Triples format
+// String returns the triple in N-Triples format.
 func (t Triple) String() string {
 	subj := formatTerm(t.Subject)
 	pred := formatTerm(t.Predicate)
@@ -20,7 +20,7 @@ func (t Triple) String() string {
 	return fmt.Sprintf("%s %s %s .", subj, pred, obj)
 }
 
-// formatTerm formats a term for output
+// formatTerm formats a term for output.
 func formatTerm(term string) string {
 	if strings.HasPrefix(term, "http://") || strings.HasPrefix(term, "https://") {
 		return "<" + term + ">"
@@ -37,115 +37,176 @@ func formatTerm(term string) string {
 	return term
 }
 
-// TripleStore is an in-memory store for RDF triples
-type TripleStore struct {
-	triples    map[string]bool
-	tripleList []Triple
-
-	// Indexes for fast lookup
-	bySubject   map[string][]int
-	byPredicate map[string][]int
-	byObject    map[string][]int
+// wellKnownIDs caches interned IDs for RDF/RDFS/OWL URI constants
+// so the fast reasoning path never has to hash these strings.
+type wellKnownIDs struct {
+	RDFType        uint32
+	SubClassOf     uint32
+	SubPropertyOf  uint32
+	Domain         uint32
+	Range          uint32
+	EquivClass     uint32
+	SameAs         uint32
+	InverseOf      uint32
+	TransitiveProp uint32
+	SymmetricProp  uint32
 }
 
-// NewTripleStore creates a new empty triple store
+// TripleStore is an in-memory store for RDF triples.
+// It wraps FastStore + Intern for compact storage while keeping
+// the original string-based public API.
+type TripleStore struct {
+	intern *Intern
+	fast   *FastStore
+	ids    wellKnownIDs
+}
+
+// NewTripleStore creates a new empty triple store.
 func NewTripleStore() *TripleStore {
-	return &TripleStore{
-		triples:     make(map[string]bool),
-		tripleList:  make([]Triple, 0),
-		bySubject:   make(map[string][]int),
-		byPredicate: make(map[string][]int),
-		byObject:    make(map[string][]int),
+	return newTripleStoreWithCapacity(256)
+}
+
+// newTripleStoreWithCapacity creates a triple store pre-sized for n triples.
+func newTripleStoreWithCapacity(n int) *TripleStore {
+	ts := &TripleStore{
+		intern: NewIntern(),
+		fast:   NewFastStore(n),
+	}
+	ts.initWellKnownIDs()
+	return ts
+}
+
+// initWellKnownIDs pre-interns all URI constants from rules.go.
+func (ts *TripleStore) initWellKnownIDs() {
+	ts.ids = wellKnownIDs{
+		RDFType:        ts.intern.ID(RDFType),
+		SubClassOf:     ts.intern.ID(RDFSSubClassOf),
+		SubPropertyOf:  ts.intern.ID(RDFSSubPropertyOf),
+		Domain:         ts.intern.ID(RDFSDomain),
+		Range:          ts.intern.ID(RDFSRange),
+		EquivClass:     ts.intern.ID(OWLEquivalentClass),
+		SameAs:         ts.intern.ID(OWLSameAs),
+		InverseOf:      ts.intern.ID(OWLInverseOf),
+		TransitiveProp: ts.intern.ID(OWLTransitiveProperty),
+		SymmetricProp:  ts.intern.ID(OWLSymmetricProperty),
 	}
 }
 
-// tripleKey generates a unique key for a triple
-func tripleKey(t Triple) string {
-	return t.Subject + "|" + t.Predicate + "|" + t.Object
+// Add adds a triple to the store, returns true if it was new.
+func (ts *TripleStore) Add(t Triple) bool {
+	ct := compactTriple{
+		S: ts.intern.ID(t.Subject),
+		P: ts.intern.ID(t.Predicate),
+		O: ts.intern.ID(t.Object),
+	}
+	return ts.fast.Add(ct)
 }
 
-// Add adds a triple to the store, returns true if it was new
-func (ts *TripleStore) Add(t Triple) bool {
-	key := tripleKey(t)
-	if ts.triples[key] {
+// Contains checks if a triple exists in the store.
+func (ts *TripleStore) Contains(t Triple) bool {
+	s, okS := ts.intern.toID[t.Subject]
+	p, okP := ts.intern.toID[t.Predicate]
+	o, okO := ts.intern.toID[t.Object]
+	if !okS || !okP || !okO {
 		return false
 	}
-
-	ts.triples[key] = true
-	idx := len(ts.tripleList)
-	ts.tripleList = append(ts.tripleList, t)
-
-	ts.bySubject[t.Subject] = append(ts.bySubject[t.Subject], idx)
-	ts.byPredicate[t.Predicate] = append(ts.byPredicate[t.Predicate], idx)
-	ts.byObject[t.Object] = append(ts.byObject[t.Object], idx)
-
-	return true
+	return ts.fast.Contains(compactTriple{S: s, P: p, O: o})
 }
 
-// Contains checks if a triple exists in the store
-func (ts *TripleStore) Contains(t Triple) bool {
-	return ts.triples[tripleKey(t)]
-}
-
-// FindBySubject returns all triples with the given subject
+// FindBySubject returns all triples with the given subject.
 func (ts *TripleStore) FindBySubject(subject string) []Triple {
-	var result []Triple
-	for _, idx := range ts.bySubject[subject] {
-		result = append(result, ts.tripleList[idx])
+	id, ok := ts.intern.toID[subject]
+	if !ok {
+		return nil
+	}
+	idxs := ts.fast.ByS(id)
+	result := make([]Triple, len(idxs))
+	for i, idx := range idxs {
+		result[i] = ts.toTriple(ts.fast.all[idx])
 	}
 	return result
 }
 
-// FindByPredicate returns all triples with the given predicate
+// FindByPredicate returns all triples with the given predicate.
 func (ts *TripleStore) FindByPredicate(predicate string) []Triple {
-	var result []Triple
-	for _, idx := range ts.byPredicate[predicate] {
-		result = append(result, ts.tripleList[idx])
+	id, ok := ts.intern.toID[predicate]
+	if !ok {
+		return nil
+	}
+	idxs := ts.fast.ByP(id)
+	result := make([]Triple, len(idxs))
+	for i, idx := range idxs {
+		result[i] = ts.toTriple(ts.fast.all[idx])
 	}
 	return result
 }
 
-// FindByObject returns all triples with the given object
+// FindByObject returns all triples with the given object.
 func (ts *TripleStore) FindByObject(object string) []Triple {
+	id, ok := ts.intern.toID[object]
+	if !ok {
+		return nil
+	}
+	// No dedicated byO index in FastStore; scan byP entries.
+	// This keeps the hot path (BySP, ByPO, ByP, ByS) fast.
 	var result []Triple
-	for _, idx := range ts.byObject[object] {
-		result = append(result, ts.tripleList[idx])
+	for _, ct := range ts.fast.all {
+		if ct.O == id {
+			result = append(result, ts.toTriple(ct))
+		}
 	}
 	return result
 }
 
-// FindBySubjectPredicate returns all triples matching subject and predicate
+// FindBySubjectPredicate returns all triples matching subject and predicate.
 func (ts *TripleStore) FindBySubjectPredicate(subject, predicate string) []Triple {
-	var result []Triple
-	for _, idx := range ts.bySubject[subject] {
-		t := ts.tripleList[idx]
-		if t.Predicate == predicate {
-			result = append(result, t)
-		}
+	s, okS := ts.intern.toID[subject]
+	p, okP := ts.intern.toID[predicate]
+	if !okS || !okP {
+		return nil
+	}
+	idxs := ts.fast.BySP(s, p)
+	result := make([]Triple, len(idxs))
+	for i, idx := range idxs {
+		result[i] = ts.toTriple(ts.fast.all[idx])
 	}
 	return result
 }
 
-// FindByPredicateObject returns all triples matching predicate and object
+// FindByPredicateObject returns all triples matching predicate and object.
 func (ts *TripleStore) FindByPredicateObject(predicate, object string) []Triple {
-	var result []Triple
-	for _, idx := range ts.byPredicate[predicate] {
-		t := ts.tripleList[idx]
-		if t.Object == object {
-			result = append(result, t)
-		}
+	p, okP := ts.intern.toID[predicate]
+	o, okO := ts.intern.toID[object]
+	if !okP || !okO {
+		return nil
+	}
+	idxs := ts.fast.ByPO(p, o)
+	result := make([]Triple, len(idxs))
+	for i, idx := range idxs {
+		result[i] = ts.toTriple(ts.fast.all[idx])
 	}
 	return result
 }
 
-// All returns all triples in the store
+// All returns all triples in the store.
 func (ts *TripleStore) All() []Triple {
-	result := make([]Triple, len(ts.tripleList))
-	copy(result, ts.tripleList)
+	result := make([]Triple, len(ts.fast.all))
+	for i, ct := range ts.fast.all {
+		result[i] = ts.toTriple(ct)
+	}
 	return result
 }
 
-// Size returns the number of triples in the store
+// Size returns the number of triples in the store.
 func (ts *TripleStore) Size() int {
-	return len(ts.tripleList)
+	return ts.fast.Size()
+}
+
+// toTriple converts a compactTriple back to a public Triple.
+func (ts *TripleStore) toTriple(ct compactTriple) Triple {
+	return Triple{
+		Subject:   ts.intern.Str(ct.S),
+		Predicate: ts.intern.Str(ct.P),
+		Object:    ts.intern.Str(ct.O),
+	}
 }

@@ -1,11 +1,54 @@
 # goreasoner
 
-[![Version](https://img.shields.io/badge/version-v0.3.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v0.3.0)
+[![Version](https://img.shields.io/badge/version-v0.4.0-blue)](https://github.com/beyondcivic/goreasoner/releases/tag/v0.4.0)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/doc/devel/release.html)
 [![Go Reference](https://pkg.go.dev/badge/github.com/beyondcivic/goreasoner.svg)](https://pkg.go.dev/github.com/beyondcivic/goreasoner)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-A Go implementation of a forward reasoner for RDF/OWL ontologies. This library provides both command-line interface and Go library for semantic reasoning, parsing Turtle format inputs and applying RDFS/OWL inference rules to derive new facts from TBox (terminology/schema) and ABox (assertions/instances).
+[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
+
+A high-performance Go implementation of a forward reasoner for RDF/OWL ontologies. This library provides both command-line interface and Go library for semantic reasoning, parsing Turtle format inputs and applying RDFS/OWL inference rules to derive new facts from TBox (terminology/schema) and ABox (assertions/instances).
+
+## ⚡ Performance (v0.4.0)
+
+> Benchmarked on Apple M3 Max. Test data: Person/Employee/Manager class hierarchy + friendOf/colleagueOf→knows property hierarchy + symmetric friendOf.
+
+| Scale | Input Triples | goreasoner (Go) | Apache Jena RDFS (Java) | Go vs Jena |
+|---|---|---|---|---|
+| 1K entities | 4,451 | **1 ms** | 6 ms | **6× faster** |
+| 10K entities | 44,451 | **12 ms** | 36 ms | **3× faster** |
+| 100K entities | 444,451 | **173 ms** | 526 ms | **3× faster** |
+| **1M entities** | **4,444,451** | **2.15 s** | **7.80 s** | **3.6× faster** |
+
+**Throughput**: 2M–6M triples/sec depending on scale. Zero external dependencies (no JVM, no HTTP service).
+
+### v0.4.0 Optimizations
+
+The internal engine was rewritten for performance with backward-compatible public API:
+
+| Technique | Description | Impact |
+|---|---|---|
+| **String Interning** | All URIs mapped to uint32 IDs; triples are 12 bytes instead of ~200 bytes | 3–5× speedup, major memory reduction |
+| **Semi-naive Evaluation** | Each round only processes new (delta) triples; avoids full-scan per iteration | 2–10× speedup for large graphs |
+| **Open-addressing Hash Set** | Robin Hood hashing for triple dedup; ~16 bytes/entry vs ~90 bytes for Go map | 50% memory reduction on dedup |
+| **Composite Indexes** | SP (subject+predicate) and PO (predicate+object) indexes for O(1) two-key lookups | 1.2× speedup on joins |
+| **Direct-emit Rules** | Rules write directly to store + delta; no intermediate slice allocation | Reduced GC pressure |
+| **`AddTriple()` API** | Skip Turtle parsing when you already have string URIs | Up to 2× speedup for programmatic loading |
+
+### Comparison with Other Solutions
+
+| Solution | 1M Entities | Language | External Dependencies |
+|---|---|---|---|
+| **goreasoner v0.4.0** | **2.15 s** | Go | **None** |
+| Apache Jena RDFS (embedded) | 7.80 s | Java | JVM |
+| Apache Jena Fuseki (HTTP) | ~10 s | Java | JVM + HTTP server |
+| rdflib + OWL-RL | >60 s (estimated) | Python | Python runtime |
+
+Run the benchmark yourself:
+
+```bash
+go test -run TestBenchmarkReport ./pkg/reasoner/ -v -timeout=600s
+```
 
 ## Overview
 
